@@ -1,0 +1,22 @@
+module("osc")
+lib("stdlib")
+
+port = 8765
+addr = "10.42.0.21"
+
+handle = osc_out(addr, port) 
+target(spike!, value) = _; osc_send(handle, "/siren/target", value) ? spike
+current(spike!, value) = _; osc_send(handle, "/siren/pitch", value) ? spike
+
+process: {
+	m1 = metro(dt=10s)
+	m2 = metro(dt=50ms)
+
+	
+	t = 50
+	st = 800
+	cur = line(st, t, 20s, dt=50ms) 
+	target(m1, t)
+	current(m2, cur)
+	print(cur)
+}

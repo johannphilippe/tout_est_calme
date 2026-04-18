@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -shared -Wl,-soname,libcsound_opcodes.so -o libcsound_opcodes.so CMakeFiles/csound_opcodes.dir/sirenes.cpp.o 

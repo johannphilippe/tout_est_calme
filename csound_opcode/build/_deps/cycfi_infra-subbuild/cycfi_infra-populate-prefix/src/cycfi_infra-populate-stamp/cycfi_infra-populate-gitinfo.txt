@@ -1,0 +1,15 @@
+# This is a generated file and its contents are an internal implementation detail.
+# The download step will be re-executed if anything in this file changes.
+# No other meaning or use of this file is supported.
+
+method=git
+command=/usr/bin/cmake;-P;/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-subbuild/cycfi_infra-populate-prefix/tmp/cycfi_infra-populate-gitclone.cmake
+source_dir=/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-src
+work_dir=/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps
+repository=https://github.com/cycfi/infra.git
+remote=origin
+init_submodules=TRUE
+recurse_submodules=--recursive
+submodules=
+CMP0097=NEW
+

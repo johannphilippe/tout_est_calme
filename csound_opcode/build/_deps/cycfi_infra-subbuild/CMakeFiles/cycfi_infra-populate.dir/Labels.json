@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-subbuild/CMakeFiles/cycfi_infra-populate"
+		},
+		{
+			"file" : "/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-subbuild/CMakeFiles/cycfi_infra-populate.rule"
+		},
+		{
+			"file" : "/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-subbuild/CMakeFiles/cycfi_infra-populate-complete.rule"
+		},
+		{
+			"file" : "/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-subbuild/cycfi_infra-populate-prefix/src/cycfi_infra-populate-stamp/cycfi_infra-populate-build.rule"
+		},
+		{
+			"file" : "/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-subbuild/cycfi_infra-populate-prefix/src/cycfi_infra-populate-stamp/cycfi_infra-populate-configure.rule"
+		},
+		{
+			"file" : "/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-subbuild/cycfi_infra-populate-prefix/src/cycfi_infra-populate-stamp/cycfi_infra-populate-download.rule"
+		},
+		{
+			"file" : "/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-subbuild/cycfi_infra-populate-prefix/src/cycfi_infra-populate-stamp/cycfi_infra-populate-install.rule"
+		},
+		{
+			"file" : "/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-subbuild/cycfi_infra-populate-prefix/src/cycfi_infra-populate-stamp/cycfi_infra-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-subbuild/cycfi_infra-populate-prefix/src/cycfi_infra-populate-stamp/cycfi_infra-populate-patch.rule"
+		},
+		{
+			"file" : "/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-subbuild/cycfi_infra-populate-prefix/src/cycfi_infra-populate-stamp/cycfi_infra-populate-test.rule"
+		},
+		{
+			"file" : "/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-subbuild/cycfi_infra-populate-prefix/src/cycfi_infra-populate-stamp/cycfi_infra-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"cycfi_infra-populate"
+		],
+		"name" : "cycfi_infra-populate"
+	}
+}

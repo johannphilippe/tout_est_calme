@@ -1,0 +1,11 @@
+/home/johann/Documents/git/tout_est_calme/csound_opcode/build/CMakeFiles/csound_opcodes.dir
+/home/johann/Documents/git/tout_est_calme/csound_opcode/build/CMakeFiles/edit_cache.dir
+/home/johann/Documents/git/tout_est_calme/csound_opcode/build/CMakeFiles/rebuild_cache.dir
+/home/johann/Documents/git/tout_est_calme/csound_opcode/build/libs/q/CMakeFiles/edit_cache.dir
+/home/johann/Documents/git/tout_est_calme/csound_opcode/build/libs/q/CMakeFiles/rebuild_cache.dir
+/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-build/CMakeFiles/infra_files.dir
+/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-build/CMakeFiles/cmake_modules.dir
+/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-build/CMakeFiles/edit_cache.dir
+/home/johann/Documents/git/tout_est_calme/csound_opcode/build/_deps/cycfi_infra-build/CMakeFiles/rebuild_cache.dir
+/home/johann/Documents/git/tout_est_calme/csound_opcode/build/libs/q/q_lib/CMakeFiles/edit_cache.dir
+/home/johann/Documents/git/tout_est_calme/csound_opcode/build/libs/q/q_lib/CMakeFiles/rebuild_cache.dir

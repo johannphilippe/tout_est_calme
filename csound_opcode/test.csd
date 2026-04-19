@@ -47,31 +47,24 @@ gkchanged init 0
 
 instr note
     inote init p4
-    print(inote)
     ifreq = mtof:i(inote)
-    print(ifreq)
-    //OSCsend(1, "10.42.0.21", 8765, "/siren/inertia", "i", 0)
-    //OSCsend(1, "10.42.0.21", 8765, "/siren/target", "f", ifreq)
-    gkorigin = gktarget
-    gktarget = ifreq
-    ao = oscili(0.1, ifreq, 2)
+    OSCsend(1, "123.45.1.10", 8765, "/siren/inertia", "i", int(2) )
+    OSCsend(1, "123.45.1.10", 8765, "/siren/target", "f", ifreq)
+    ao = oscili(0.02, ifreq, 2)
     outs(ao, ao)
-endin
-
-instr sched 
-    kmet = metro:k(0.1) // Every 10 seconds 
-    krnd = int(random:k(30, 90))
-    if(changed:k(kmet) > 0 && kmet > 0) then 
-        schedulek("note", 0, 10, krnd)
-    endif
 endin
 
 instr celeste_i 
     ain = inch(1)
-    kfreq, asig celeste ain
-    gkfreq = kfreq
-    printk2(kfreq, 50)
-    ao = oscili(0.1, kfreq, 2)
+    icut init 200
+    ihyst init -40 
+    imult init 8
+    asig init 0
+    kfreq, asig celeste ain, icut, ihyst, imult
+    ;gkfreq = kfreq
+    kmet = metro:k(10)
+    printf( "freq : %f \n", kmet, kfreq )
+    ao = oscili(0.02, kfreq, 2)
     outs( ao, a(0))
     outch(3, asig)
     //oscsend(kfreq, "10.42.0.21", 8765, "/siren/freq", "f", kfreq) 
@@ -79,36 +72,67 @@ endin
 
 instr gisele_i 
     ain = inch(1)
-    kfreq, asig gisele ain
+    icut init 500
+    ihyst init -40 
+    imult init 16
+    kfreq, asig gisele ain, icut, ihyst, imult
     gkfreq = kfreq
-    printk2(kfreq, 50)
+    kmet = metro:k(10)
+    printf( "freq : %f \n", kmet, kfreq )
     ao = oscili(0.1, kfreq, 2)
     outs( ao, a(0))
     outch(3, asig)
     //oscsend(kfreq, "10.42.0.21", 8765, "/siren/freq", "f", kfreq) 
 endin
+
 instr gabrielle_i 
+    icut = 500
+    ihyst = -40 
+    imult = 16
     ain = inch(1)
-    kfreq, asig gabrielle ain
+    kfreq, asig gabrielle ain, icut, ihyst, imult
     gkfreq = kfreq
-    printk2(kfreq, 50)
+    kmet = metro:k(10)
+    printf( "freq : %f \n", kmet, kfreq )
     ao = oscili(0.1, kfreq, 2)
     outs( ao, a(0))
     outch(3, asig)
     //oscsend(kfreq, "10.42.0.21", 8765, "/siren/freq", "f", kfreq) 
 endin
 
-instr cv
-    if(gktarget == gkorigin) then 
-        // Do nothing 
-    endif
-    
-
-    if(changed:k(gkfreq) > 0) then 
-    endif
+instr sonora_slim 
+    ain = inch(1)
+    icut = 1000 
+    ihyst = -60
+    iratio = 1.5
+    imax_step = 100
+    kfreq, asig sonora_slim ain, icut, ihyst, iratio, imax_step
+    gkfreq = kfreq
+    kmet = metro:k(10)
+    printf( "freq : %f \n", kmet, kfreq)
+    ao = oscili(0.02, kfreq, 2)
+    outs( ao, a(0))
+    outch(3, asig)
+    //oscsend(kfreq, "
 endin
 
-instr 1 
+instr sonora_piaf
+    ain = inch(1)
+    icut = 1000 
+    ihyst = -60
+    iratio = 0.5
+    imax_step = 100
+    kfreq, asig sonora_slim ain, icut, ihyst, iratio, imax_step
+    gkfreq = kfreq
+    kmet = metro:k(10)
+    printf( "freq : %f \n", kmet, kfreq)
+    ao = oscili(0.02, kfreq, 2)
+    ;outs( ao, a(0))
+    outch(3, asig)
+    OSCsend(kfreq, "123.45.1.10", 8765, "/siren/pitch", "f", kfreq)
+endin
+
+instr 2 
     ain = inch(1)
     icut = 1000
     asig = ain
@@ -117,79 +141,31 @@ instr 1
 
     krms = rms(asig)
     kgain init 1.0
-    if(krms = 0.0) then 
-        kgain = 1.0
-    else 
-        kgain = 1.0 / krms / 4
-    endif
-
-    asig *= kgain
-
-    //asig_comp = balance2(asig, ain)
-    ktrack = pptrack(asig, 0.01)
-
-    kfreq init 2 
-    kfreq = limit:k(ktrack * 16  /* * (1 + 7/12)*/  , 20, icut)
-    ao = oscili(0.1, kfreq, 2 )
-    printf("track : freq : %f %f \n", changed:k(ktrack), ktrack, kfreq)
-    outs(ao, a(0) )
-endin
-
-
-/*
-{
-    News : 
-    Sonora 12V : 
-    {
-        4 LPF Butterworth 1500Hz
-        Compensation : 1.0 / rms 
-        inversion = 0
-        threshold = 0.1
-        freq = tracking * 1.5
-
-    }
-    Sonore 24V: 
-    {
-        4 LPF Butterworth 1500Hz
-        Compensation : 1.0 / rms 
-        inversion = 0
-        threshold = 0.1
-        freq = tracking * 0.5
-    }
-
-}
-*/
-instr 2 
-    ain = inch(1)
-    icut = 1500
-    asig = ain
-    //asig = highcut(ain, icut, 3, 0)
-    asig = butlp( butlp( butlp( butlp( ain, icut ), icut ), icut  ), icut )
-
-    krms = rms(asig)
-    kgain init 1.0
+    kg init 1.0
     if(krms < 0.001) then 
-        kgain = 1.0
+        kg = 1.0
     else 
-        kgain = 1.0 / krms 
+        kg = 1.0 / krms 
     endif
+
+    kgain = lineto(kg, 0.01)
 
     asig *= kgain
 
     //asig_comp = balance2(asig, ain)
-    iinv init 1
+    iinv init 0
     ithreshold init 0.1
     ktrack = zctrack(asig, iinv, ithreshold, 100)
 
     kfreq init 100
-    kfreq = limit:k(ktrack * (4) /* (0.5) */  , 10, icut)
-    ao = oscili(0.1 , kfreq, 2 )  ;+ oscili(0.1, 500) 
-    printf("\t\ttrack : freq : %f %f \n", changed:k(ktrack), ktrack, kfreq)
-    outs(ao, a(0) )
+    kfreq = limit:k(ktrack * (1.5) /* (0.5) */  , 10, icut)
+    ao = oscili(0.02 , kfreq, 2 )  ;+ oscili(0.1, 500) 
+    ;printf("\t\ttrack : freq : %f %f \n", changed:k(ktrack), ktrack, kfreq)
+    ;outs(ao, a(0) )
     outch(3, asig)
-
-
 endin
+ 
+
  
 </CsInstruments>
 ; ==============================================
@@ -198,8 +174,14 @@ f 0 z
 f2 0 128 10 1 0.5 0.3 0.25 0.2 0.167 0.14 0.125 .111   ; Sawtooth with a small amount of data
 ;i 2 0 -1
 ;i "celeste_i" 0 -1
-i "gisele_i" 0 -1
+;i "gisele_i" 0 -1
 ;i "gabrielle_i" 0 -1
+;i "pll_pitch_tracker" 0 -1
+;i "mpzc_pitch_tracker" 0 -1
+;i "sonora_slim" 0 -1
+i "sonora_piaf" 0 -1
+
+i "note" 0 10 60
 
  
  

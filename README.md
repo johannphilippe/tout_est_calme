@@ -8,3 +8,18 @@ The principle is simple :
 - We then send the target frequency (what we want) and the current tracked frequency to ESP32 
 - The ESP32 drives a PWM signal controlling the voltage sent to the siren  
 
+
+
+# notes 
+
+- If no output frequency : 
+    * Dropped too fast : PWM 0 
+    * Frequency too far for a long time : reset frequency
+
+
+# First TODO 
+
+- Configure OSC modes : 
+    - direct PWM : disable Frequency tracking 
+    - target freq : enables 
+    - shutdown : outputs 0

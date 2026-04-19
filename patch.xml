@@ -1,0 +1,36 @@
+<!DOCTYPE patchbay>
+<patchbay name="patch" version="0.9.13">
+ <output-sockets>
+  <socket exclusive="off" type="jack-audio" name="audio in " client="MiniFuse\ 1\ Analog\ Surround\ 4\.0">
+   <plug>capture_FR</plug>
+  </socket>
+  <socket exclusive="off" type="jack-audio" name="csound 1" client="csound6">
+   <plug>output1</plug>
+   <plug>output2</plug>
+  </socket>
+  <socket exclusive="off" type="jack-audio" name="csound 2" client="csound6">
+   <plug>output3</plug>
+  </socket>
+ </output-sockets>
+ <input-sockets>
+  <socket exclusive="off" type="jack-audio" name="csound 1" client="csound6">
+   <plug>input1</plug>
+  </socket>
+  <socket exclusive="off" type="jack-audio" name="MiniFuse\ 1\ Analog\ Surround\ 4\. 1" client="MiniFuse\ 1\ Analog\ Surround\ 4\.0">
+   <plug>playback_FL</plug>
+   <plug>playback_FR</plug>
+   <plug>playback_RL</plug>
+   <plug>playback_RR</plug>
+  </socket>
+  <socket exclusive="off" type="jack-audio" name="REAPER 1" client="REAPER">
+   <plug>in4</plug>
+  </socket>
+ </input-sockets>
+ <slots/>
+ <cables>
+  <cable input="csound 1" type="jack-audio" output="audio in "/>
+  <cable input="MiniFuse\ 1\ Analog\ Surround\ 4\. 1" type="jack-audio" output="csound 1"/>
+  <cable input="REAPER 1" type="jack-audio" output="csound 2"/>
+ </cables>
+</patchbay>
+

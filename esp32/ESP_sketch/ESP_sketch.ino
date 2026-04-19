@@ -61,20 +61,18 @@ struct shared_data
 
 shared_data<float> target_freq(0.0f);
 shared_data<float> current_pitch(0.0f); 
+shared_data<int32_t> direct_pwm(0);
+shared_data<bool> target_enable(false);
 shared_data<bool> target_changed(false); 
 shared_data<bool> shutdown(false); 
 
-
-
 osc_parser osc;
-
-
 
 /*
   PWM Config 
 */
 
-constexpr const int PWM = 12;
+constexpr const int PWM = 16;
 constexpr const int CHANNEL = 0;
 constexpr uint16_t frequency = 18000;
 constexpr uint8_t resolution = 12;
@@ -93,14 +91,37 @@ uint8_t data_rcv[2];
 /*
   Wifi config 
 */
+
+//#define CELESTE
+//#define GISELE
+//#define GABRIELLE 
+//#define SONORA12
+#define PIAF 
+
+#ifdef PIAF 
+  constexpr uint8_t ip_postfix = 10;
+#elif defined(GABRIELLE)
+#elif defined(GISELE)
+#elif defined(CELESTE)
+#endif
+
 struct wifi_config 
 {
+  wifi_config() 
+  : local_ip(123,45,1,ip_postfix)
+  , gateway(123,45,1,1)
+  , subnet(255, 255, 255, 0)
+  {}
+
   WiFiUDP udp;
+  IPAddress local_ip, gateway, subnet;
+
   static constexpr uint16_t PORT = 8765; 
-  static constexpr const char *SSID = "johannhotspot";
+  static constexpr const char *SSID = "ulysse";
   static constexpr const char *PWD = "";
   static constexpr uint16_t BUFFER_SIZE = 512;
   char packet_buffer[BUFFER_SIZE];
+
   String ip_str;
 };
 wifi_config wifi;
@@ -114,11 +135,13 @@ void network_task(void* params)
     if(packet_size) 
     {
       int len = wifi.udp.read(wifi.packet_buffer, 512); 
+      
       for(size_t i = 0; i < len; ++i)
       {
         Serial.print((char)wifi.packet_buffer[i]);
       }
       Serial.println();
+      
       if(!osc.parse(wifi.packet_buffer, len)) 
       {
         Serial.println("Failed to parse OSC");
@@ -138,33 +161,39 @@ void network_task(void* params)
           {
             Serial.println("Failed to write target freq");
           } else {
+            target_enable.write(true);
             target_changed.write(true);
+            //Serial.printf("Received Target %f, enabling target mode \n", t);
           }
         } else if(osc.match("/siren/shutdown"))
         {
           int32_t res = osc.read<int32_t>(0); 
           bool s = (res > 0) ? true : false;  
           shutdown.write(s);
+          target_enable.write(false);
+          //Serial.printf("Shutdown mode changed : %i \n", res);
         } else if(osc.match("/siren/inertia"))
         {
+
           int32_t res = osc.read<int32_t>(0); 
+          //Serial.printf("Inertia : %i \n", res);
           cv.set_inertia(static_cast<voltage_control::inertia_t>(res));
         } else if(osc.match("/siren/pwm"))
         {
+          target_enable.write(false);
           int32_t res = osc.read<int32_t>(0); 
-          // Disable automatic tracking 
-          shutdown.write(true); 
-          ledcWrite(PWM, res); 
+          direct_pwm.write(res);
         }
       }
     }
-    vTaskDelay(100);
+    vTaskDelay(2);
   }
 }
 
 TaskHandle_t task_net; 
 
 void setup() {
+
   ledcAttach(PWM, frequency, resolution);
   ledcWrite(PWM, 0);
 
@@ -174,7 +203,15 @@ void setup() {
 
   Serial.begin(9600);
 
+  
+  Serial.printf("CV Resolution & range %f %f \n", cv.resolution, cv.range);
   WiFi.mode(WIFI_STA);
+
+  if(!WiFi.config(wifi.local_ip, wifi.gateway, wifi.subnet)) 
+  {
+    Serial.println("STA Failed to configure");
+  }
+
   WiFi.begin(wifi.SSID, wifi.PWD);
   Serial.print("\nConnecting ");
   while(WiFi.status() != WL_CONNECTED)
@@ -188,7 +225,10 @@ void setup() {
   wifi.ip_str = WiFi.localIP().toString(); 
 
   WiFi.setSleep(false);
-  wifi.udp.begin(wifi.PORT);
+  if(!wifi.udp.begin(wifi.local_ip, wifi.PORT)) 
+  {
+    Serial.println("Failed to bind UDP to IP");
+  }
 
   /* 
     Start networking on dedicated core
@@ -215,6 +255,7 @@ float last_pitch = 0.0f;
 bool target_changed_value = false;
 bool shutdown_val = false;
 int8_t direction = false;
+bool target_enable_value = false;
 
 void loop() {
   // Serial 
@@ -235,11 +276,19 @@ void loop() {
   }
   */
   shutdown.read(shutdown_val);
-
   if(shutdown_val) {
     ledcWrite(PWM, 0);
     return;
   }
+
+  target_enable.read(target_enable_value);
+  if(!target_enable_value) {
+    int32_t pwm_value = 0;
+    direct_pwm.read(pwm_value);
+    ledcWrite(PWM, pwm_value);
+    return;
+  }
+
   // First check if anything has changed in the target 
   if(target_changed.read(target_changed_value) && target_changed_value) 
   {
@@ -253,17 +302,12 @@ void loop() {
   }
 
   // Then read current pitch 
-  if(current_pitch.read(current_pitch_value)) 
-  {
-    // Nothing to do particularly
-  }
+  current_pitch.read(current_pitch_value); 
 
- 
   uint16_t pwm_value = cv(target_frequency_value, last_pitch, current_pitch_value);
-  Serial.printf("PWM value : %f \n", pwm_value);
+  //Serial.printf("PWM value : %f \n", pwm_value);
   ledcWrite(PWM, pwm_value);
 
-  vTaskDelay(100);
-
+  vTaskDelay(1);
   // Now check how far we are from the target, and adjust the PWM accordingly
 }

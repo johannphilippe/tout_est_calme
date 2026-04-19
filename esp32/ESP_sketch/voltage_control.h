@@ -1,170 +1,146 @@
-#pragma once 
-#include <cstdlib>
-#include <stdlib.h>
+#pragma once
 #include <stdint.h>
-#include <algorithm>
+#include <cmath>
 
 inline constexpr uint16_t pow2_u16(uint16_t exponent)
 {
-  uint16_t base = 2;
-  for(size_t i = 0; i < exponent; ++i)
-    base *= 2; 
-  return base; 
+    uint16_t base = 2;
+    for (size_t i = 1; i < exponent; ++i)
+        base *= 2;
+    return base;
 }
 
-inline float clip(float value, float min, float max) 
+inline float clip(float value, float min, float max)
 {
-    if(value < min) return min;
-    if(value > max) return max;
+    if (value < min) return min;
+    if (value > max) return max;
     return value;
 }
 
+/*
+    Velocity-form PI controller with peak-boost phase.
+
+    Velocity form means the PI output is a *delta* added to the running pwm_ratio,
+    so the controller naturally integrates over time without a separate integral state —
+    pwm_ratio itself is the accumulated output.
+
+    Peak phase: when the error is large (siren far from target), the controller ramps
+    pwm_ratio toward a fixed peak voltage at `peak_ramp` per tick instead of using PI.
+    This overcomes static friction / high inertia without a sudden voltage step.
+    Once the error falls below `release_threshold`, control returns to the PI phase.
+*/
 struct voltage_control
 {
-    enum class inertia_t 
+    enum class inertia_t
     {
         very_slow = 0,
-        slow = 1, 
-        medium = 2,
-        fast = 3, 
+        slow      = 1,
+        medium    = 2,
+        fast      = 3,
     };
 
-    inertia_t inertia = inertia_t::very_slow;
-
-    struct threshold_t
+    struct profile_t
     {
-        float peak; 
-        float near; 
-        float very_near;
-
-        float near_step; 
-        float very_near_step;
-
-        static threshold_t fast() 
-        {
-            return {fast_peak, fast_near, fast_very_near, fast_near_step, fast_very_near_step};
-        }
-        static threshold_t slow()
-        {
-            return {slow_peak, slow_near, slow_very_near, slow_near_step, slow_very_near_step};
-        }
-        static threshold_t very_slow() 
-        {
-            return {very_slow_peak, very_slow_near, very_slow_very_near, very_slow_near_step, very_slow_very_near_step};
-        }
-        static threshold_t medium()
-        {
-            return {medium_peak, medium_near, medium_very_near, medium_near_step, medium_very_near_step};
-        }
-
-        static constexpr float fast_peak = 0.5f; 
-        static constexpr float fast_near = 0.85f; 
-        static constexpr float fast_very_near = 0.95f;
-        static constexpr float fast_near_step = 0.001f;
-        static constexpr float fast_very_near_step = 0.0005f;
-
-        static constexpr float slow_peak = 0.1f;
-        static constexpr float slow_near = 0.50f;
-        static constexpr float slow_very_near = 0.75f;
-        static constexpr float slow_near_step = 0.005f;
-        static constexpr float slow_very_near_step = 0.001f;
-
-        static constexpr float very_slow_peak = 0.001f; 
-        static constexpr float very_slow_near = 0.95f; 
-        static constexpr float very_slow_very_near = 0.99f; 
-        static constexpr float very_slow_near_step = 0.001f; 
-        static constexpr float very_slow_very_near_step = 0.0001f;
-
-        static constexpr float medium_peak = 0.25f;
-        static constexpr float medium_near = 0.75f;
-        static constexpr float medium_very_near = 0.90f;
-        static constexpr float medium_near_step = 0.002f;
-        static constexpr float medium_very_near_step = 0.0005f;
+        float ki;                // integral gain: pwm_delta per Hz of error per tick
+        float kp;                // proportional gain: pwm_delta per Hz of error change per tick
+        float peak_up;           // pwm ratio target when going toward higher frequency
+        float peak_down;         // pwm ratio target when going toward lower frequency
+        float peak_threshold;    // Hz error above which peak phase engages
+        float release_threshold; // Hz error below which peak phase disengages
+        float peak_ramp;         // max pwm ratio change per tick during peak phase
     };
 
-    threshold_t thresholds;
+    static profile_t make_profile(inertia_t t)
+    {
+        switch (t)
+        {
+            case inertia_t::very_slow:
+                // Heavy motor: needs full voltage to start, very slow PI to avoid overshoot
+                return {0.000001f, 0.0001f, 1.0f, 0.0f, 100.0f, 30.0f, 0.005f};
+            case inertia_t::slow:
+                return {0.000003f, 0.0002f, 1.0f, 0.0f,  80.0f, 20.0f, 0.010f};
+            case inertia_t::medium:
+                return {0.000006f, 0.0004f, 0.9f, 0.1f,  60.0f, 15.0f, 0.020f};
+            case inertia_t::fast:
+                // Light motor: less peak needed, faster PI response
+                return {0.000010f, 0.0008f, 0.8f, 0.2f,  40.0f, 10.0f, 0.040f};
+        }
+        return make_profile(inertia_t::medium);
+    }
 
-    voltage_control(inertia_t inertia_setting) : inertia(inertia_setting)
+    voltage_control(inertia_t inertia_setting)
     {
         set_inertia(inertia_setting);
     }
 
     void set_inertia(inertia_t n)
     {
-        inertia = n; 
-        switch(inertia) 
-        {
-            case inertia_t::fast:
-                thresholds = threshold_t::fast();
-                break;
-            case inertia_t::slow:
-                thresholds = threshold_t::slow();
-                break;
-            case inertia_t::medium:
-                thresholds = threshold_t::medium();
-                break;
-            case inertia_t::very_slow:
-                thresholds = threshold_t::very_slow();
-        }
+        inertia = n;
+        profile = make_profile(n);
+        reset();
     }
 
-    /* 
-        - destination is the target frequency 
-        - source is the origin frequency (frequency when the target changed)
-        - current is the last PWM value sent to the hardware
+    /*
+        destination : target frequency (Hz)
+        source      : measured frequency at the moment destination was set — used to
+                      detect target changes and reset controller state
+        current     : current measured frequency (Hz)
     */
-    uint16_t operator() (float destination, float source, float current) 
+    uint16_t operator()(float destination, float source, float current)
     {
-        // Check percentage of the distance to the target
+        float error     = destination - current;
+        float abs_error = fabsf(error);
+        int8_t dir      = (error >= 0.0f) ? 1 : -1;
 
-        if(current == destination)
-            return output;
-
-        Serial.printf("Target= %f, Source = %f,  Current = %f \n", destination, source, current);
-        float up = std::max(destination, source);
-        float down = std::min(destination, source);
-        float distance = up - down;
-        const int8_t direction = (destination > current) ? 1 : -1;
-        float percent_run = 0.0f; 
-
-
-        if(distance != 0.0f)
-        {        
-            if(destination > source) 
-            {
-                percent_run = (current - source) / distance;
-            } else 
-            {
-                percent_run = (source - current) / distance;
-            }
+        // Reset integrator state when the target changes (source is updated by caller)
+        if (source != prev_source)
+        {
+            prev_source = source;
+            prev_error  = error; // prevent a kp spike on the first tick after change
+            in_peak     = (abs_error >= profile.peak_threshold);
         }
 
+        // Hysteretic peak phase transitions
+        if (abs_error >= profile.peak_threshold)  in_peak = true;
+        if (abs_error <= profile.release_threshold) in_peak = false;
 
-        Serial.printf("Distance : %f, percent_run : %f \n", distance, percent_run);
-        if(percent_run < thresholds.peak) 
+        if (in_peak)
         {
-            res = (direction == 1) ? 1.0f : 0.0f;
-        } else if(percent_run < thresholds.near) 
+            // Ramp toward peak voltage — never jumps instantly to avoid overwhelming the detector
+            float target = (dir > 0) ? profile.peak_up : profile.peak_down;
+            float delta  = target - pwm_ratio;
+            pwm_ratio += clip(delta, -profile.peak_ramp, profile.peak_ramp);
+        }
+        else
         {
-                res -= direction * thresholds.near_step; 
-        } else if(percent_run < thresholds.very_near) 
-        {
-            res -= current + direction * thresholds.very_near_step;
-        } else 
-        {
-            // Do nothing 
+            // Velocity-form PI: delta = kp * d(error) + ki * error
+            // Accumulated in pwm_ratio which acts as the integral of the PI output
+            float delta = profile.kp * (error - prev_error) + profile.ki * error;
+            pwm_ratio   = clip(pwm_ratio + delta, 0.0f, 1.0f);
         }
 
-        res = clip(res, 0.0f, 1.0f);
-        output = static_cast<uint16_t>(res * range);
-        Serial.printf("output : %d \n", output);
+        prev_error = error;
+        output     = static_cast<uint16_t>(pwm_ratio * range);
         return output;
     }
 
-    static constexpr uint8_t resolution = 12; 
-    static constexpr uint16_t range = pow2_u16(resolution); 
+    static constexpr uint8_t  resolution = 12;
+    static constexpr uint16_t range      = pow2_u16(resolution);
 
-    float res = 0.0f;
-    uint16_t output = 0;
+private:
+    inertia_t inertia = inertia_t::very_slow;
+    profile_t profile = {};
 
+    float    pwm_ratio   = 0.0f;
+    float    prev_error  = 0.0f;
+    float    prev_source = -1.0f; // sentinel: triggers reset on first call
+    bool     in_peak     = false;
+    uint16_t output      = 0;
+
+    void reset()
+    {
+        pwm_ratio  = 0.0f;
+        prev_error = 0.0f;
+        in_peak    = false;
+    }
 };
